@@ -21,23 +21,29 @@ fn main() {
     let a = F::from(5);
     let b = F::from(27);
     assert_eq!(a, F::from(94)); // 94 = 5 mod 89
-                                // We can compute in the field
+
+    // We can compute in the field
     assert_eq!(a + b, F::from(32)); // 5+27 = 32 mod 89
     assert_eq!(a - b, F::from(67)); // 5-27 = 67 mod 89
     assert_eq!(a * b, F::from(46)); // 5*27 = 46 mod 89
     assert_eq!(a.square(), F::from(25)); // 5^2 = 25 mod 17
     assert_eq!(b.double(), F::from(54)); // 2*27 = 54 mod 17
     assert_eq!(F::from(0xff), F::from(77)); // 255 = 77 mod 89
-                                            // one can also compute a^n in the field; n must be converted into a "big integer" over a 64-bit limb
+
+    // One can also compute a^n in the field; n must be converted into a "big integer" over a 64-bit limb
     assert_eq!(a.pow(BigInt::<1>::from(7 as u32)), F::from(72)); // 5^7 = 72 mod 89
-                                                                 // The multiplicative identity of `F` can be obtained with `F::one()`
+    
+    // The multiplicative identity of `F` can be obtained with `F::one()`
     assert_eq!(F::one(), F::from(1));
+    
     // We can inverse field elements; NB: we must unwrap as it may return an Error if called on zero
     let c = F::rand(&mut rng);
     let d = c.inverse().unwrap();
     assert_eq!(c * d, F::one());
+    
     // The size of `F` can be obtained with `F::MODULUS`
     let p = F::MODULUS;
+    
     // one can check Fermat's little theorem: for a in F, one has a^p = a mod p
     let a = F::rand(&mut rng);
     assert_eq!(a.pow(p), a);
@@ -65,8 +71,10 @@ fn main() {
     // The point at infinity (i.e., the zero of the group law) can be obtained with `Affine::zero()` or `Projective::zero()`
     // An affine point `g` is encoded as a struct with three fields, its coordinates `x` and `y` and a boolean `infinity`
     let zero_aff = Affine::zero();
+    
     // Obviously, field `infinity` is set to `true` for the point at infinity
     assert!(zero_aff.infinity);
+    
     // Let's take a look at a random point
     let g_aff = Affine::rand(&mut rng);
     println!("g_aff.x = {}", g_aff.x);
@@ -82,12 +90,14 @@ fn main() {
     // We can convert from affine to projective representations using `into_group()`
     // and vice-versa with `into_affine()`
     let zero_proj = zero_aff.into_group();
+    
     // The point at infinity in jacobian projective coordinates is [1 : 1 : 0]
     assert!(zero_proj.x.is_one());
     assert!(zero_proj.y.is_one());
     assert!(zero_proj.z.is_zero());
 
     let g_proj = Projective::rand(&mut rng);
+    
     // Q3: check that the coordinates of point `g_proj` satisfy the curve equation in Jacobian projective coordinates Y^2 = X^3 + 7*Z^6
     // Compute the left-hand side `lhs` and the right-hand side `rhs` of this equation and check that they are equal
     let lhs = 0;
@@ -99,6 +109,7 @@ fn main() {
 
     // The "standard" generator G (that everyone uses in cryptographic schemes) of the curve can be obtained with Affine::generator() or Projective::generator()
     let gen = Affine::generator();
+    
     // We can add points with +
     // We can also compute scalar multiplication with method `mul` which takes an element from the scalar field as argument
     // The result is in projective form even if applied to an affine point, if we want the affine form we must convert back to affine explicitly
