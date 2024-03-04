@@ -53,6 +53,17 @@ fn main() {
     let mut gen_list: Vec<i32> = Vec::new();
     for i in 2..89 {
         // write your test here to check whether i is a generator of F_89
+        let mut is_gen = true;
+        for j in 1..88 {
+            let i_pw_j = F::from(i).pow(BigInt::<1>::from(j as u32));
+            if i_pw_j == F::one() {
+                is_gen = false;
+                break;
+            }
+        }
+        if is_gen {
+            gen_list.push(i);
+        }
     }
     println!(
         "There are {} generators of F_89 and they are {:?}\n",
@@ -60,7 +71,7 @@ fn main() {
         gen_list
     );
     // uncomment the following line to check your solution (it shouldn't panic for the correct solution)
-    // assert_eq!(gen_list.iter().sum::<i32>(), 1780);
+    assert_eq!(gen_list.iter().sum::<i32>(), 1780);
 
     // The crate ark-secp256k1 implements the secp256k1 elliptic curve used in Bitcoin
     // We bring four types from this crate into scope: `Fq`, `Fr`, `Affine` and `Projective`
@@ -83,8 +94,8 @@ fn main() {
 
     // Q2: check that the coordinates of point `g_aff` satisfy the curve equation y^2 = x^3 + 7
     // Compute the left-hand side `lhs` and the right-hand side `rhs` of this equation and check that they are equal
-    let lhs = 0;
-    let rhs = 0;
+    let lhs = g_aff.y.square();
+    let rhs = g_aff.x.square() * g_aff.x + Fq::from(7);
     assert_eq!(lhs, rhs);
 
     // We can convert from affine to projective representations using `into_group()`
@@ -100,12 +111,18 @@ fn main() {
     
     // Q3: check that the coordinates of point `g_proj` satisfy the curve equation in Jacobian projective coordinates Y^2 = X^3 + 7*Z^6
     // Compute the left-hand side `lhs` and the right-hand side `rhs` of this equation and check that they are equal
-    let lhs = 0;
-    let rhs = 0;
+    let lhs = g_proj.y.square();
+    let rhs =
+        g_proj.x.square() * g_proj.x + Fq::from(7) * g_proj.z.square() * g_proj.z.square().square();
     assert_eq!(lhs, rhs);
 
     // One can check that a field element x is a square with a.legendre().is_qr()
     // Q4: Is there a point on secp256k1 with x-coordinate 0? 1? and 5?
+    println!("Is 7 a square? {}", Fq::from(7).legendre().is_qr());
+    let a = Fq::from(1).square() * Fq::from(1) + Fq::from(7);
+    println!("Is 1^3+7 a square? {}", a.legendre().is_qr());
+    let b = Fq::from(5).square() * Fq::from(5) + Fq::from(7);
+    println!("Is 5^3+7 a square? {}\n", b.legendre().is_qr());
 
     // The "standard" generator G (that everyone uses in cryptographic schemes) of the curve can be obtained with Affine::generator() or Projective::generator()
     let gen = Affine::generator();
@@ -118,11 +135,13 @@ fn main() {
     assert_eq!(c, d);
 
     // Q5: compute the affine coordinates of 2G using the doubling formulas in the slides
-    let x = 0;
-    let y = 0;
+    let lambda =
+        Fq::from(3) * gen.x.square() * Fq::from(2).inverse().unwrap() * gen.y.inverse().unwrap();
+    let x = lambda.square() - Fq::from(2) * gen.x;
+    let y = lambda * (gen.x - x) - gen.y;
     // Check they are the same as the one you get by computing `gen.mul(Fr::from(2)` by uncommenting the following two lines
-    // assert_eq!(x, gen.mul(Fr::from(2)).into_affine().x);
-    // assert_eq!(y, gen.mul(Fr::from(2)).into_affine().y);
+    assert_eq!(x, gen.mul(Fr::from(2)).into_affine().x);
+    assert_eq!(y, gen.mul(Fr::from(2)).into_affine().y);
 
     println!("Good job!");
 }
