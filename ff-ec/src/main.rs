@@ -26,8 +26,8 @@ fn main() {
     assert_eq!(a + b, F::from(32)); // 5+27 = 32 mod 89
     assert_eq!(a - b, F::from(67)); // 5-27 = 67 mod 89
     assert_eq!(a * b, F::from(46)); // 5*27 = 46 mod 89
-    assert_eq!(a.square(), F::from(25)); // 5^2 = 25 mod 17
-    assert_eq!(b.double(), F::from(54)); // 2*27 = 54 mod 17
+    assert_eq!(a.square(), F::from(25)); // 5^2 = 25 mod 89
+    assert_eq!(b.double(), F::from(54)); // 2*27 = 54 mod 89
     assert_eq!(F::from(0xff), F::from(77)); // 255 = 77 mod 89
 
     // One can also compute a^n in the field; n must be converted into a "big integer" over a 64-bit limb
