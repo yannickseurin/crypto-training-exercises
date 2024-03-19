@@ -54,7 +54,7 @@ fn main() {
     // and the master secret key is offset by the tweak so that the child key
     // is sk_i = msk + t (mod scalar field order)
     // Take a look at `two_for_one_schnorr sign`
-    // The developer found an optimized way generate signatures for two child keys at once
+    // The developer found an optimized way to generate signatures for two child keys at once
     // Q4: Let's break `two_for_one_schnorr sign`
     // You have free access to method `two_for_one_schnorr_sign_oracle`
     // implemented on some master secret key instance `msk`
