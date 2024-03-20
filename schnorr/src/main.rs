@@ -128,7 +128,7 @@ fn break_two_for_one_schnorr_sign(msk: &SecretKey, mpk: &PublicKey) -> SecretKey
     // The function computes two signatures from a single secret key and a single secret nonce
     // Again, we should be able to find two equations with just two unknowns
     // The two child keys are sk1 = msk + t1 and sk2 = msk + t2
-    // where t_1 = H(pmk, 1) and t_2 = H(pmk, 2) are the tweaks that we can compute
+    // where t_1 = H(mpk, 1) and t_2 = H(mpk, 2) are the tweaks that we can compute
     // This means we can compute the child public keys from the master public key:
     // pk1 = (sk1) G = msk G + t1 G = mpk + t1 G
     // pk2 = (sk2) G = msk G + t2 G = mpk + t2 G
@@ -138,7 +138,7 @@ fn break_two_for_one_schnorr_sign(msk: &SecretKey, mpk: &PublicKey) -> SecretKey
     // s2 = r + t2 + c2(x + t2)
     // We known all values here except r and x so we can solve the system
     // Actually we can rewrite the system as
-    // s1 - t1 - c1*t1 = r + c1 x
+    // s1 - t1 - c1*t1 = r + c1*x
     // s2 - t2 - c2*t2 = r + c2*x
     // These are the same equations as for a standard nonce reuse attack with s values shifted
     let m1 = "message1".as_bytes();
