@@ -158,11 +158,48 @@ fn main() {
 }
 
 fn break_sign_with_wrong_hash(sk: &SecretKey, m: &[u8]) -> BlsSig {
-    todo!()
+    // The hash function used here is H(m) = HtF(m).G2 where G2 is a generator of group `G2Affine`
+    // and HtF is a hash function with values in the scalar field.
+    // Hence, the signature of a message m is sig(m)= x.(HtF(m).G2) = HtF(m).(x.G2)
+    // So if we can compute x.G2, we can compute the signature of any message!
+    // But any signature actually reveals x.G2, so one call to the signature oracle is enough.
+    let m1 = "some_message".as_bytes();
+    let sig1 = sk.sign_with_wrong_hash_oracle(m1);
+    // sig1 = x.(HtF(m1).G2) = HtF(m1).(x.G2)
+    // x.G2 = 1/HtF(m1).sig1
+    let h1 = hash_to_scalar_field(&m1);
+    let p = sig1.0.mul(h1.inverse().unwrap()).into_affine(); // p = x.G2
+    let h = hash_to_scalar_field(&m);
+    BlsSig(p.mul(h).into_affine())
 }
 
 fn break_basic_aggregation(public_keys: &[PublicKey], m: &[u8]) -> (PublicKey, BlsSig) {
-    todo!()
+    // This is the standard "rogue-key" attack we mentioned in the slides
+    // The verification uses an "aggregate" public key which is just the sum of all the public keys in the list:
+    // apk = pk_1 + ... + pk_n
+    // So if we choose the new public npk so that it cancels all the public keys in the list, we can forge.
+    // Concretely, we pick npk = x.G1 - pk_1 - ... - pk_n
+    // This way, the new aggregate public key is apk' = x.G1 and we know the corresponding secret key.
+    let mut rng = ChaChaRng::from_seed(*b"let's break this scheme!!!!!!!!!");
+    let rogue_key = Fr::rand(&mut rng);
+    // We compute the new public key npk = x.G1 - pk_1 ... - pk_n
+    let new_key = PublicKey(
+        (G1Affine::generator().mul(rogue_key)
+            - public_keys
+                .iter()
+                .fold(G1Projective::zero(), |acc, pk| acc + pk.0))
+        .into_affine(),
+    );
+    // Now we can forge a valid aggregate signature on message `m` for the extended list
+    // of public keys (pk_1, ..., pk_n, npk) simply by signing with secret key x
+    let forged_sig = BlsSig(
+        hash_to_curve()
+            .hash(m)
+            .unwrap()
+            .mul(rogue_key)
+            .into_affine(),
+    );
+    (new_key, forged_sig)
 }
 
 fn break_aggregation_with_proofs(
@@ -170,7 +207,37 @@ fn break_aggregation_with_proofs(
     proofs: &[BlsSig],
     m: &[u8],
 ) -> (PublicKey, BlsSig, BlsSig) {
-    todo!()
+    // The idea is very similar to the previous question, except we must also compute a proof of possession
+    // of the secret key corresponding to the new public key npk = x.G1 - pk_1 - ... - pk_n
+    // We don't know the secret key for npk, but we have signatures on `PROOF_MSG` for all public keys pk_1, ..., pk_n
+    // Namely, proof_i = x_i.H(PROOF_MSG), where x_i is the secret key for pk_i
+    // Hence we can compute a valid signature on `PROOF_MSG` for npk as sig(PROOF_MSG) = x.H(PROOF_MSG) - proof_1 - ... - proof_n
+    // As before, we compute a valid aggregate signature on message `m` for public keys
+    // (pk_1, ..., pk_n, npk) by signing with secret key x.
+    let mut rng = ChaChaRng::from_seed(*b"let's break this scheme!!!!!!!!!");
+    let rogue_key = Fr::rand(&mut rng);
+    let new_key = PublicKey(
+        (G1Affine::generator().mul(rogue_key)
+            - public_keys
+                .iter()
+                .fold(G1Projective::zero(), |acc, pk| acc + pk.0))
+        .into_affine(),
+    );
+    let forged_proof = BlsSig(
+        (hash_to_curve().hash(PROOF_MSG).unwrap().mul(rogue_key)
+            - proofs
+                .iter()
+                .fold(G2Projective::zero(), |acc, proof| acc + proof.0))
+        .into_affine(),
+    );
+    let forged_sig = BlsSig(
+        hash_to_curve()
+            .hash(m)
+            .unwrap()
+            .mul(rogue_key)
+            .into_affine(),
+    );
+    (new_key, forged_proof, forged_sig)
 }
 
 fn break_aggregation_with_better_proofs(
@@ -178,5 +245,23 @@ fn break_aggregation_with_better_proofs(
     proofs: &[BlsSig],
     m: &[u8],
 ) -> (Vec<PublicKey>, Vec<BlsSig>, BlsSig) {
-    todo!()
+    // The key thing to note here is that the proof of possession is computed by
+    // signing the x-coordinate of the public key.
+    // But P and -P have the same x-coordinate!
+    // This means we can add -pk_i to the list since we can compute the corresponding proof
+    // without knowledge of the corresponding secret key.
+    // We can also add a public key npk of our choosing.
+    // The extended list is (pk_1, ..., pk_n, -pk_1, ..., -pk_n, npk).
+    // The sum of all public keys is again simply npk, for which we can sign since we know the corresponding secret key.
+    let mut new_keys: Vec<PublicKey> = public_keys.iter().map(|p| PublicKey(-p.0)).collect();
+    let mut new_proofs: Vec<BlsSig> = proofs.iter().map(|s| BlsSig(-s.0)).collect();
+    let (my_sk, my_pk) = bls_keygen();
+    let my_proof = bls_sign(
+        &my_sk,
+        &Into::<num_bigint::BigUint>::into(my_pk.0.x).to_bytes_le(),
+    );
+    new_keys.push(my_pk);
+    new_proofs.push(my_proof);
+    let forged_sig = bls_sign(&my_sk, m);
+    (new_keys, new_proofs, forged_sig)
 }
